@@ -1,97 +1,129 @@
 <!DOCTYPE html>
-border-radius: 6px;
-outline: none;
-}
-#search:focus {
-border-color: #1c7ed6;
-box-shadow: 0 0 4px #1c7ed6;
-}
-</style>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Water City All Time Stats</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      padding: 20px; 
+      background: linear-gradient(#cfefff, #89c6ff);
+      color: #033e6b;
+    }
+    h1 {
+      color: #024a86;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 10px; 
+      background: #ffffffcc;
+      backdrop-filter: blur(4px);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td { 
+      padding: 10px; 
+      border: 1px solid rgba(0, 87, 142, 0.3); 
+      text-align: left; 
+    }
+    th { 
+      background: #69b3ff; 
+      color: white; 
+      cursor: pointer; 
+    }
+    th:hover {
+      background: #4aa5ff;
+    }
+    tr:nth-child(even) { background: #e8f5ff; }
+    tr:nth-child(odd) { background: #f5faff; }
+    #search { 
+      padding: 8px; 
+      width: 250px; 
+      border: 1px solid #5aa8e6;
+      border-radius: 6px;
+      outline: none;
+    }
+    #search:focus {
+      border-color: #1c7ed6;
+      box-shadow: 0 0 4px #1c7ed6;
+    }
+  </style>
 </head>
 <body>
-<h1>Water City All Time Stats</h1>
-<input id="search" placeholder="Search players..." />
+  <h1>Water City All Time Stats</h1>
+  <input id="search" placeholder="Search players..." />
 
+  <table id="table">
+    <thead id="thead"></thead>
+    <tbody id="tbody"></tbody>
+  </table>
 
-<table id="table">
-<thead id="thead"></thead>
-<tbody id="tbody"></tbody>
-</table>
+  <script>
+    let sortKey = "points";
+    let sortDir = "desc";
+    let data = [];
 
+    const HIDDEN_COLS = ["id", "memberid"]; // columns to hide
 
-<script>
-let sortKey = "points";
-let sortDir = "desc";
-let data = [];
+    fetch("hockey.json")
+      .then(res => res.json())
+      .then(json => { 
+        data = json.map(player => ({
+          ...player,
+          averagePointsPerSeason: (player.seasonsplayed > 0) 
+            ? (player.points / player.seasonsplayed).toFixed(2)
+            : "0.00"
+        }));
+        renderTable(); 
+      });
 
+    document.getElementById("search").addEventListener("input", renderTable);
 
-const HIDDEN_COLS = ["id", "memberid"]; // columns to hide
+    function properCase(str) {
+      return str
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/seasonsplayed/i, "Seasons Played")
+        .replace(/averagePointsPerSeason/i, "Average Points Per Season")
+        .replace(/^./, c => c.toUpperCase());
+    }
 
+    function renderTable() {
+      const search = document.getElementById("search").value.toLowerCase();
+      let filtered = data.filter(row =>
+        Object.values(row).join(" ").toLowerCase().includes(search)
+      );
 
-fetch("hockey.json")
-.then(res => res.json())
-.then(json => {
-data = json.map(player => ({
-...player,
-averagePointsPerSeason: (player.seasonsplayed > 0)
-? (player.points / player.seasonsplayed).toFixed(2)
-: "0.00"
-}));
-renderTable();
-});
+      filtered.sort((a, b) => {
+        const A = a[sortKey];
+        const B = b[sortKey];
+        return sortDir === "asc" ? A - B : B - A;
+      });
 
+      const columns = Object.keys(data[0]).filter(c => !HIDDEN_COLS.includes(c));
+      const thead = document.getElementById("thead");
+      const tbody = document.getElementById("tbody");
 
-document.getElementById("search").addEventListener("input", renderTable);
+      thead.innerHTML = "<tr>" +
+        columns.map(col => `<th onclick=\"setSort('${col}')\">${properCase(col)}${sortKey===col ? (sortDir==='asc'?' ▲':' ▼') : ''}</th>`).join("") +
+        "</tr>";
 
+      tbody.innerHTML = filtered.map(row =>
+        `<tr>${columns.map(c => `<td>${row[c]}</td>`).join("")}</tr>`
+      ).join("");
+    }
 
-function properCase(str) {
-return str
-.replace(/([A-Z])/g, ' $1')
-.replace(/seasonsplayed/i, "Seasons Played")
-.replace(/averagePointsPerSeason/i, "Average Points Per Season")
-.replace(/^./, c => c.toUpperCase());
-}
-
-
-function renderTable() {
-const search = document.getElementById("search").value.toLowerCase();
-let filtered = data.filter(row =>
-Object.values(row).join(" ").toLowerCase().includes(search)
-);
-
-
-filtered.sort((a, b) => {
-const A = a[sortKey];
-const B = b[sortKey];
-return sortDir === "asc" ? A - B : B - A;
-});
-
-
-const columns = Object.keys(data[0]).filter(c => !HIDDEN_COLS.includes(c));
-const thead = document.getElementById("thead");
-const tbody = document.getElementById("tbody");
-
-
-thead.innerHTML = "<tr>" +
-columns.map(col => `<th onclick=\"setSort('${col}')\">${properCase(col)}${sortKey===col ? (sortDir==='asc'?' ▲':' ▼') : ''}</th>`).join("") +
-"</tr>";
-
-
-tbody.innerHTML = filtered.map(row =>
-`<tr>${columns.map(c => `<td>${row[c]}</td>`).join("")}</tr>`
-).join("");
-}
-
-
-function setSort(col) {
-if (sortKey === col) {
-sortDir = sortDir === "asc" ? "desc" : "asc";
-} else {
-sortKey = col;
-sortDir = "asc";
-}
-renderTable();
-}
-</script>
+    function setSort(col) {
+      if (sortKey === col) {
+        sortDir = sortDir === "asc" ? "desc" : "asc";
+      } else {
+        sortKey = col;
+        sortDir = "asc";
+      }
+      renderTable();
+    }
+  </script>
 </body>
 </html>
