@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hockey Stats Table</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+th { background: #eee; cursor: pointer; }
+tr:nth-child(even) { background: #f9f9f9; }
+#search { padding: 8px; width: 250px; }
+</style>
+</head>
+<body>
+<h1>Hockey Stats Table</h1>
+<input id="search" placeholder="Search players..." />
+
+
+<table id="table">
+<thead id="thead"></thead>
+<tbody id="tbody"></tbody>
+</table>
+
+
+<script>
+let sortKey = "points";
+let sortDir = "desc";
+let data = [];
+
+
+fetch("hockey.json")
+.then(res => res.json())
+.then(json => { data = json; renderTable(); });
+
+
+document.getElementById("search").addEventListener("input", renderTable);
+
+
+function renderTable() {
+const search = document.getElementById("search").value.toLowerCase();
+let filtered = data.filter(row =>
+Object.values(row).join(" ").toLowerCase().includes(search)
+);
+
+
+filtered.sort((a, b) => {
+const A = a[sortKey];
+const B = b[sortKey];
+return sortDir === "asc" ? A - B : B - A;
+});
+
+
+const columns = Object.keys(data[0]);
+const thead = document.getElementById("thead");
+const tbody = document.getElementById("tbody");
+
+
+thead.innerHTML = "<tr>" +
+columns.map(col => `<th onclick=\"setSort('${col}')\">${col}${sortKey===col ? (sortDir==='asc'?' ▲':' ▼') : ''}</th>`).join("") +
+"</tr>";
+
+
+tbody.innerHTML = filtered.map(row =>
+`<tr>${columns.map(c => `<td>${row[c]}</td>`).join("")}</tr>`
+).join("");
+}
+
+
+function setSort(col) {
+if (sortKey === col) {
+sortDir = sortDir === "asc" ? "desc" : "asc";
+} else {
+sortKey = col;
+sortDir = "asc";
+}
+renderTable();
+}
+</script>
+</body>
+</html>
